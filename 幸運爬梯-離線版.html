@@ -56,4 +56,18 @@ $('together').onclick=async()=>{if(busy||!game)return;lock(true);try{await walkT
 $('build').onclick=()=>newGame();$('start').onclick=async()=>{if(busy||!game)return;lock(true);try{await walk(Number($('person').value))}finally{lock(false)}};$('all').onclick=async()=>{if(busy||!game)return;lock(true);try{for(let i=0;i<game.names.length;i++)if(!game.done.has(i)){await walk(i);await new Promise(r=>setTimeout(r,1000))}$('status').textContent='🎉 全部抽籤完成！每一位都找到自己的終點。'}finally{lock(false)}};$('overview').onclick=overview;$('settings').onclick=()=>{if(document.body.classList.contains('present')){$('status').textContent='請先退出全螢幕再調整設定。';return}document.body.classList.toggle('collapsed')};
 async function exitPresentation(){document.body.classList.remove('present');$('full').textContent='⛶ 全螢幕';if(document.fullscreenElement)await document.exitFullscreen()}
 $('full').onclick=async()=>{if(document.body.classList.contains('present'))return exitPresentation();document.body.classList.add('present');$('full').textContent='⛶ 退出全螢幕';try{await document.documentElement.requestFullscreen?.()}catch(e){}};document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement){document.body.classList.remove('present');$('full').textContent='⛶ 全螢幕'}});document.addEventListener('keydown',e=>{if(e.key==='Escape')exitPresentation()});newGame(true);
-</script></html>
+</script><script id="gp-focus-script">(()=>{
+'use strict';
+const body=document.body,mode=body.dataset.gpFocusClass||'';
+let parentActive=false,localActive=false;
+const toggle=document.createElement('button');toggle.id='gp-focus-toggle';toggle.type='button';toggle.setAttribute('aria-label','切換遊戲全螢幕');body.append(toggle);
+function render(){const on=parentActive||localActive||!!document.fullscreenElement;body.classList.toggle('gp-focus',on);if(mode)body.classList.toggle(mode,on);toggle.textContent=on?'⛶ 退出全螢幕':'⛶ 全螢幕';toggle.setAttribute('aria-pressed',String(on));window.dispatchEvent(new Event('resize'))}
+async function change(){if(parentActive){window.parent.postMessage({type:'gamepoke-exit-presentation'},'*');return}if(document.fullscreenElement){await document.exitFullscreen();localActive=false}else if(localActive){localActive=false}else{localActive=true;try{await document.documentElement.requestFullscreen?.()}catch{}}render()}
+toggle.addEventListener('click',change);
+// Existing in-game fullscreen buttons use the same state without touching game data.
+for(const id of ['full','fullscreen']){const button=document.getElementById(id);if(button)button.onclick=change}
+window.addEventListener('message',event=>{if(event.source!==window.parent||event.data?.type!=='gamepoke-presentation')return;parentActive=event.data.enabled===true;render()});
+document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement)localActive=false;render()});
+document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!document.fullscreenElement){if(parentActive)window.parent.postMessage({type:'gamepoke-exit-presentation'},'*');else{localActive=false;render()}}});
+render();
+})();</script></html>
